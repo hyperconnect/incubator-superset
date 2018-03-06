@@ -1,6 +1,7 @@
+import 'datatables.net';
 import dt from 'datatables.net-bs';
-import 'datatables.net-bs/css/dataTables.bootstrap.css';
 import $ from 'jquery';
+import 'datatables-bootstrap3-plugin/media/css/datatables-bootstrap3.css';
 
 import { d3format, fixDataTableBodyHeight } from '../javascripts/modules/utils';
 import './pivot_table.css';
@@ -40,7 +41,7 @@ module.exports = function (slice, payload) {
     });
   });
 
-  if (fd.groupby.length === 1) {
+  if (false && fd.groupby.length === 1) {
     // When there is only 1 group by column,
     // we use the DataTable plugin to make the header fixed.
     // The plugin takes care of the scrolling so we don't need

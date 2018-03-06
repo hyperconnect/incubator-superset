@@ -599,6 +599,68 @@ class PivotTableViz(BaseViz):
         )
 
 
+class RetentionTableViz(BaseViz):
+
+    """A retention table view, define your rows, columns and metrics"""
+
+    viz_type = "retention_table"
+    verbose_name = _("Retention Table")
+    credits = 'a <a href="https://github.com/airbnb/superset">Superset</a> original'
+    is_timeseries = False
+
+    def query_obj(self):
+        d = super(RetentionTableViz, self).query_obj()
+        groupby = self.form_data.get('groupby')
+        columns = self.form_data.get('columns')
+        metrics = self.form_data.get('metrics')
+        if not groupby:
+            raise Exception(_("Please choose at least one \"Group by\" field "))
+        if not columns or len(columns) > 1:
+            raise Exception(_("Please choose one \"Columns\" field "))
+        if not metrics or len(metrics) > 1:
+            raise Exception(_("Please choose one metric"))
+        if (
+                any(v in groupby for v in columns) or
+                any(v in columns for v in groupby)):
+            raise Exception(_("'Group By' and 'Columns' can't overlap"))
+        return d
+
+    def get_data(self, df):
+        if (
+                self.form_data.get("granularity") == "all" and
+                DTTM_ALIAS in df):
+            del df[DTTM_ALIAS]
+        df = df.pivot_table(
+            index=self.form_data.get('groupby'),
+            columns=self.form_data.get('columns'),
+            values=self.form_data.get('metrics'),
+            aggfunc=self.form_data.get('pandas_aggfunc'),
+            margins=self.form_data.get('pivot_margins'),
+        )
+        if len(self.form_data.get('groupby')) > 1:
+            df.index = pd.MultiIndex.from_tuples([i + ('value',) for i in df.index], names=df.index.names + ('metric',))
+        else:
+            df.index = pd.MultiIndex.from_tuples([[i, 'value'] for i in df.index], names=[df.index.name, 'metric'])
+        columns = list(df.columns.levels[-1])
+        for _, row in list(df.iterrows()):
+            divisor = row[columns.index(row.name[0]) if row.name[0] in columns else 0]
+            row *= (100 / divisor) if divisor else 0
+            row.name = row.name[:-1] + ('percentage',)
+            df = df.append(row)
+        df.sort_index(level=0, inplace=True)
+        # Display metrics side by side with each column
+        if self.form_data.get('combine_metric'):
+            df = df.stack(0).unstack()
+        return dict(
+            columns=list(df.columns),
+            html=df.to_html(
+                na_rep='',
+                classes=(
+                    "dataframe table table-striped table-bordered "
+                    "table-condensed table-hover").split(" ")),
+        )
+
+
 class MarkupViz(BaseViz):
 
     """Use html or markdown to create a free form widget"""
