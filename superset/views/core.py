@@ -1903,16 +1903,25 @@ class Superset(BaseSupersetView):
     def sqllab_viz(self):
         SqlaTable = ConnectorRegistry.sources['table']
         data = json.loads(request.form.get('data'))
+        db_id = data.get('dbId')
         table_name = data.get('datasourceName')
         SqlaTable = ConnectorRegistry.sources['table']
+
+        database = (
+            db.session.query(models.Database)
+            .filter_by(id=db_id)
+            .first()
+        )
+
         table = (
             db.session.query(SqlaTable)
             .filter_by(table_name=table_name)
             .first()
         )
+
         if not table:
-            table = SqlaTable(table_name=table_name)
-        table.database_id = data.get('dbId')
+            table = SqlaTable(table_name=table_name, database_id=db_id, database=database)
+
         q = SupersetQuery(data.get('sql'))
         table.sql = q.stripped()
         db.session.add(table)
@@ -1955,6 +1964,16 @@ class Superset(BaseSupersetView):
         table.columns = cols
         table.metrics = metrics
         db.session.commit()
+
+        role_name = app.config.get('VISUALIZE_ACCESS_ROLE')
+        if role_name is not None:
+            view_menu_perm = sm.find_permission_view_menu(
+                view_menu_name=table.get_perm(),
+                permission_name='datasource_access')
+
+            role = sm.find_role(role_name)
+            sm.add_permission_role(role, view_menu_perm)
+
         return self.json_response(json.dumps({
             'table_id': table.id,
         }))

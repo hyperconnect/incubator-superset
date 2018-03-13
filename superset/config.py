@@ -361,6 +361,8 @@ BLUEPRINTS = []
 # into a proxied one
 TRACKING_URL_TRANSFORMER = lambda x: x  # noqa: E731
 
+VISUALIZE_ACCESS_ROLE = 'visualize_access'
+
 try:
     if CONFIG_PATH_ENV_VAR in os.environ:
         # Explicitly import config module that is not in pythonpath; useful
