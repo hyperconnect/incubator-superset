@@ -626,6 +626,31 @@ export const visTypes = {
     },
   },
 
+  retention_table: {
+    label: 'Retention Table',
+    controlPanelSections: [
+      {
+        label: 'Query',
+        expanded: true,
+        controlSetRows: [
+          ['groupby', 'columns'],
+          ['metrics'],
+        ],
+      },
+      {
+        label: 'Pivot Options',
+        controlSetRows: [
+          ['pandas_aggfunc', 'pivot_margins'],
+          ['number_format', 'combine_metric'],
+        ],
+      },
+    ],
+    controlOverrides: {
+      groupby: { includeTime: true },
+      columns: { includeTime: true },
+    },
+  },
+
   separator: {
     label: t('Separator'),
     controlPanelSections: [

@@ -41,5 +41,6 @@ const vizMap = {
   deck_screengrid: require('./deckgl/screengrid.jsx'),
   deck_grid: require('./deckgl/grid.jsx'),
   deck_hex: require('./deckgl/hex.jsx'),
+  retention_table: require('./retention_table.js'),
 };
 export default vizMap;
