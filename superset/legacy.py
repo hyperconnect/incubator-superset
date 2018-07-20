@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+# pylint: disable=C,R,W
 """Code related with dealing with legacy / change management"""
 from __future__ import absolute_import
 from __future__ import division
@@ -80,3 +82,10 @@ def cast_form_data(form_data):
         if k not in FORM_DATA_KEY_WHITELIST:
             del d[k]
     return d
+
+
+def update_time_range(form_data):
+    """Move since and until to time_range."""
+    form_data['time_range'] = '{} : {}'.format(
+        form_data.pop('since'), form_data.pop('until'))
+    return form_data

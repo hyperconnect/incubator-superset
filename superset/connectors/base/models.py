@@ -1,5 +1,13 @@
+# -*- coding: utf-8 -*-
+# pylint: disable=C,R,W
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import json
 
+from past.builtins import basestring
 from sqlalchemy import (
     and_, Boolean, Column, Integer, String, Text,
 )
@@ -115,6 +123,13 @@ class BaseDatasource(AuditMixinNullable, ImportMixin):
             if m.d3format
         }
 
+    def add_missing_metrics(self, metrics):
+        exisiting_metrics = {m.metric_name for m in self.metrics}
+        for metric in metrics:
+            if metric.metric_name not in exisiting_metrics:
+                metric.table_id = self.id
+                self.metrics += [metric]
+
     @property
     def metrics_combo(self):
         return sorted(
@@ -138,6 +153,10 @@ class BaseDatasource(AuditMixinNullable, ImportMixin):
         }
 
     @property
+    def select_star(self):
+        pass
+
+    @property
     def data(self):
         """Data representation of the datasource sent to the frontend"""
         order_by_choices = []
@@ -157,6 +176,7 @@ class BaseDatasource(AuditMixinNullable, ImportMixin):
         return {
             'all_cols': utils.choicify(self.column_names),
             'column_formats': self.column_formats,
+            'database': self.database.data,  # pylint: disable=no-member
             'edit_url': self.url,
             'filter_select': self.filter_select_enabled,
             'filterable_cols': utils.choicify(self.filterable_column_names),
@@ -169,7 +189,38 @@ class BaseDatasource(AuditMixinNullable, ImportMixin):
             'metrics': [o.data for o in self.metrics],
             'columns': [o.data for o in self.columns],
             'verbose_map': verbose_map,
+            'schema': self.schema,
+            'select_star': self.select_star,
         }
+
+    @staticmethod
+    def filter_values_handler(
+            values, target_column_is_numeric=False, is_list_target=False):
+        def handle_single_value(v):
+            # backward compatibility with previous <select> components
+            if isinstance(v, basestring):
+                v = v.strip('\t\n \'"')
+                if target_column_is_numeric:
+                    # For backwards compatibility and edge cases
+                    # where a column data type might have changed
+                    v = utils.string_to_num(v)
+                if v == '<NULL>':
+                    return None
+                elif v == '<empty string>':
+                    return ''
+            return v
+        if isinstance(values, (list, tuple)):
+            values = [handle_single_value(v) for v in values]
+        else:
+            values = handle_single_value(values)
+        if is_list_target and not isinstance(values, (tuple, list)):
+            values = [values]
+        elif not is_list_target and isinstance(values, (tuple, list)):
+            if len(values) > 0:
+                values = values[0]
+            else:
+                values = None
+        return values
 
     def get_query_str(self, query_obj):
         """Returns a query as a string
@@ -192,6 +243,15 @@ class BaseDatasource(AuditMixinNullable, ImportMixin):
         This is used to populate the dropdown showing a list of
         values in filters in the explore view"""
         raise NotImplementedError()
+
+    @staticmethod
+    def default_query(qry):
+        return qry
+
+    def get_column(self, column_name):
+        for col in self.columns:
+            if col.column_name == column_name:
+                return col
 
 
 class BaseColumn(AuditMixinNullable, ImportMixin):
@@ -256,7 +316,7 @@ class BaseColumn(AuditMixinNullable, ImportMixin):
     def data(self):
         attrs = (
             'column_name', 'verbose_name', 'description', 'expression',
-            'filterable', 'groupby', 'is_dttm')
+            'filterable', 'groupby', 'is_dttm', 'type')
         return {s: getattr(self, s) for s in attrs}
 
 
