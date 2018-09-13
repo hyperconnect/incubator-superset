@@ -6,11 +6,11 @@ import { mount } from 'enzyme';
 import { Creatable } from 'react-select';
 
 import ColorSchemeControl from
-  '../../../../javascripts/explore/components/controls/ColorSchemeControl';
-import { ALL_COLOR_SCHEMES } from '../../../../javascripts/modules/colors';
+  '../../../../src/explore/components/controls/ColorSchemeControl';
+import { getAllSchemes } from '../../../../src/modules/ColorSchemeManager';
 
 const defaultProps = {
-  options: Object.keys(ALL_COLOR_SCHEMES).map(s => ([s, s])),
+  options: Object.keys(getAllSchemes()).map(s => ([s, s])),
 };
 
 describe('ColorSchemeControl', () => {

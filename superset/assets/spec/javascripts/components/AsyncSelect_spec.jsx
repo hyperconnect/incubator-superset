@@ -5,11 +5,11 @@ import { describe, it } from 'mocha';
 import { expect } from 'chai';
 import sinon from 'sinon';
 
-import AsyncSelect from '../../../javascripts/components/AsyncSelect';
+import AsyncSelect from '../../../src/components/AsyncSelect';
 
 describe('AsyncSelect', () => {
   const mockedProps = {
-    dataEndpoint: '/slicemodelview/api/read',
+    dataEndpoint: '/chart/api/read',
     onChange: sinon.spy(),
     placeholder: 'Select...',
     mutator: () => [
@@ -63,7 +63,6 @@ describe('AsyncSelect', () => {
         <AsyncSelect {...mockedProps} autoSelect />,
       );
       const spy = sinon.spy(wrapper.instance(), 'onChange');
-      wrapper.instance().fetchOptions();
       server.respond();
 
       expect(spy.callCount).to.equal(1);
