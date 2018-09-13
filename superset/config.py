@@ -403,7 +403,10 @@ BLUEPRINTS = []
 # into a proxied one
 TRACKING_URL_TRANSFORMER = lambda x: x  # noqa: E731
 
+# hpcnt 변경되어있던 부분 (전 커밋에서 확인)
 VISUALIZE_ACCESS_ROLE = 'visualize_access'
+##########################################
+
 # Interval between consecutive polls when using Hive Engine
 HIVE_POLL_INTERVAL = 5
 

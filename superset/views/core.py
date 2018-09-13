@@ -2186,7 +2186,7 @@ class Superset(BaseSupersetView):
         db_id = data.get('dbId')
         table_name = data.get('datasourceName')
         SqlaTable = ConnectorRegistry.sources['table']
-
+        # hpcnt 변경되어있던 부분 (전 커밋에서 확인)
         database = (
             db.session.query(models.Database)
             .filter_by(id=db_id)
@@ -2204,7 +2204,7 @@ class Superset(BaseSupersetView):
         table.schema = data.get('schema')
         table.template_params = data.get('templateParams')
         table.is_sqllab_view = True
-
+        #######################################
         q = SupersetQuery(data.get('sql'))
         table.sql = q.stripped()
         db.session.add(table)
