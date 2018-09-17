@@ -174,7 +174,7 @@ def execute_sql(
         conn = engine.raw_connection()
         cursor = conn.cursor()
         logging.info('Running query: \n{}'.format(executed_sql))
-        logging.info(query.executed_sql)
+        logging.info('\nuser: {}, query: {}\n'.format(query.user, query.executed_sql))
         query_start_time = utils.now_as_float()
         db_engine_spec.execute(cursor, query.executed_sql, async_=True)
         logging.info('Handling cursor')
