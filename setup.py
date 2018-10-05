@@ -89,7 +89,7 @@ setup(
         'requests',
         'simplejson>=3.15.0',
         'six',
-        'sqlalchemy==2.1',
+        'sqlalchemy',
         'sqlalchemy-utils',
         'sqlparse',
         'tableschema',
