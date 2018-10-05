@@ -88,7 +88,7 @@ setup(
         'requests',
         'simplejson>=3.15.0',
         'six',
-        'sqlalchemy',
+        'sqlalchemy==2.1',
         'sqlalchemy-utils',
         'sqlparse',
         'tableschema',
