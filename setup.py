@@ -58,6 +58,7 @@ setup(
         'bleach',
         'boto3==1.4.7',
         'botocore>=1.7.0, <1.8.0',
+        'click==6.7',
         'celery>=4.2.0',
         'colorama',
         'contextlib2',
