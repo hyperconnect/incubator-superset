@@ -638,7 +638,7 @@ class Database(Model, AuditMixinNullable, ImportMixin):
     expose_in_sqllab = Column(Boolean, default=False)
     allow_run_sync = Column(Boolean, default=True)
     allow_run_async = Column(Boolean, default=False)
-    allow_csv_upload = Column(Boolean, default=True)
+    allow_csv_upload = Column(Boolean, default=False)
     allow_ctas = Column(Boolean, default=False)
     allow_dml = Column(Boolean, default=False)
     force_ctas_schema = Column(String(250))
@@ -646,11 +646,12 @@ class Database(Model, AuditMixinNullable, ImportMixin):
     extra = Column(Text, default=textwrap.dedent("""\
     {
         "metadata_params": {},
-        "engine_params": {}
+        "engine_params": {},
+        "metadata_cache_timeout": {},
+        "schemas_allowed_for_csv_upload": []
     }
     """))
     perm = Column(String(1000))
-
     impersonate_user = Column(Boolean, default=False)
     export_fields = ('database_name', 'sqlalchemy_uri', 'cache_timeout',
                      'expose_in_sqllab', 'allow_run_sync', 'allow_run_async',
@@ -870,8 +871,17 @@ class Database(Model, AuditMixinNullable, ImportMixin):
             pass
         return views
 
-    def all_schema_names(self):
-        return sorted(self.db_engine_spec.get_schema_names(self.inspector))
+    def all_schema_names(self, force_refresh=False):
+        extra = self.get_extra()
+        medatada_cache_timeout = extra.get('metadata_cache_timeout', {})
+        schema_cache_timeout = medatada_cache_timeout.get('schema_cache_timeout')
+        enable_cache = 'schema_cache_timeout' in medatada_cache_timeout
+        return sorted(self.db_engine_spec.get_schema_names(
+            inspector=self.inspector,
+            enable_cache=enable_cache,
+            cache_timeout=schema_cache_timeout,
+            db_id=self.id,
+            force=force_refresh))
 
     @property
     def db_engine_spec(self):
@@ -908,6 +918,7 @@ class Database(Model, AuditMixinNullable, ImportMixin):
                 extra = json.loads(self.extra)
             except Exception as e:
                 logging.error(e)
+                raise e
         return extra
 
     def get_table(self, table_name, schema=None):
@@ -930,6 +941,9 @@ class Database(Model, AuditMixinNullable, ImportMixin):
 
     def get_foreign_keys(self, table_name, schema=None):
         return self.inspector.get_foreign_keys(table_name, schema)
+
+    def get_schema_access_for_csv_upload(self):
+        return self.get_extra().get('schemas_allowed_for_csv_upload', [])
 
     @property
     def sqlalchemy_uri_decrypted(self):

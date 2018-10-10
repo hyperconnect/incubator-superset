@@ -7,7 +7,6 @@ from __future__ import unicode_literals
 
 from datetime import datetime
 import functools
-import json
 import logging
 import traceback
 
@@ -19,6 +18,7 @@ from flask_appbuilder.widgets import ListWidget
 from flask_babel import get_locale
 from flask_babel import gettext as __
 from flask_babel import lazy_gettext as _
+import simplejson as json
 import yaml
 
 from superset import conf, db, security_manager, utils
@@ -52,7 +52,7 @@ def json_error_response(msg=None, status=500, stacktrace=None, payload=None, lin
         payload['link'] = link
 
     return Response(
-        json.dumps(payload, default=utils.json_iso_dttm_ser),
+        json.dumps(payload, default=utils.json_iso_dttm_ser, ignore_nan=True),
         status=status, mimetype='application/json')
 
 
@@ -85,7 +85,7 @@ def get_datasource_exist_error_msg(full_name):
 
 
 def get_user_roles():
-    if g.user.is_anonymous():
+    if g.user.is_anonymous:
         public_role = conf.get('AUTH_ROLE_PUBLIC')
         return [security_manager.find_role(public_role)] if public_role else []
     return g.user.roles
@@ -95,7 +95,7 @@ class BaseSupersetView(BaseView):
 
     def json_response(self, obj, status=200):
         return Response(
-            json.dumps(obj, default=utils.json_int_dttm_ser),
+            json.dumps(obj, default=utils.json_int_dttm_ser, ignore_nan=True),
             status=status,
             mimetype='application/json')
 
@@ -108,6 +108,7 @@ class BaseSupersetView(BaseView):
             'conf': {k: conf.get(k) for k in FRONTEND_CONF_KEYS},
             'locale': locale,
             'language_pack': get_language_pack(locale),
+            'feature_flags': conf.get('FEATURE_FLAGS'),
         }
 
 
@@ -288,7 +289,7 @@ def check_ownership(obj, raise_if_false=True):
     security_exception = SupersetSecurityException(
         "You don't have the rights to alter [{}]".format(obj))
 
-    if g.user.is_anonymous():
+    if g.user.is_anonymous:
         if raise_if_false:
             raise security_exception
         return False

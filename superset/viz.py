@@ -100,6 +100,8 @@ class BaseViz(object):
         self.process_metrics()
 
     def process_metrics(self):
+        # metrics in TableViz is order sensitive, so metric_dict should be
+        # OrderedDict
         self.metric_dict = OrderedDict()
         fd = self.form_data
         for mkey in METRIC_KEYS:
@@ -185,6 +187,17 @@ class BaseViz(object):
         }
         return fillna
 
+    def get_samples(self):
+        query_obj = self.query_obj()
+        query_obj.update({
+            'groupby': [],
+            'metrics': [],
+            'row_limit': 1000,
+            'columns': [o.column_name for o in self.datasource.columns],
+        })
+        df = self.get_df(query_obj)
+        return df.to_dict(orient='records')
+
     def get_df(self, query_obj=None):
         """Returns a pandas dataframe based on the query object"""
         if not query_obj:
@@ -238,9 +251,15 @@ class BaseViz(object):
             if dtype.type == np.object_ and col in metrics:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
 
+    def process_query_filters(self):
+        utils.convert_legacy_filters_into_adhoc(self.form_data)
+        merge_extra_filters(self.form_data)
+        utils.split_adhoc_filters_into_base_filters(self.form_data)
+
     def query_obj(self):
         """Building a query object"""
         form_data = self.form_data
+        self.process_query_filters()
         gb = form_data.get('groupby') or []
         metrics = self.all_metrics or []
         columns = form_data.get('columns') or []
@@ -254,12 +273,6 @@ class BaseViz(object):
             groupby.remove(DTTM_ALIAS)
             is_timeseries = True
 
-        # extras are used to query elements specific to a datasource type
-        # for instance the extra where clause that applies only to Tables
-
-        utils.convert_legacy_filters_into_adhoc(form_data)
-        merge_extra_filters(form_data)
-        utils.split_adhoc_filters_into_base_filters(form_data)
         granularity = (
             form_data.get('granularity') or
             form_data.get('granularity_sqla')
@@ -282,8 +295,8 @@ class BaseViz(object):
         self.from_dttm = from_dttm
         self.to_dttm = to_dttm
 
-        filters = form_data.get('filters', [])
-
+        # extras are used to query elements specific to a datasource type
+        # for instance the extra where clause that applies only to Tables
         extras = {
             'where': form_data.get('where', ''),
             'having': form_data.get('having', ''),
@@ -300,7 +313,7 @@ class BaseViz(object):
             'groupby': groupby,
             'metrics': metrics,
             'row_limit': row_limit,
-            'filter': filters,
+            'filter': self.form_data.get('filters', []),
             'timeseries_limit': limit,
             'extras': extras,
             'timeseries_limit_metric': timeseries_limit_metric,
@@ -1184,12 +1197,12 @@ class NVD3TimeSeriesViz(NVD3Viz):
             df = df.pivot_table(
                 index=DTTM_ALIAS,
                 columns=fd.get('groupby'),
-                values=utils.get_metric_names(fd.get('metrics')))
+                values=self.metric_labels)
         else:
             df = df.pivot_table(
                 index=DTTM_ALIAS,
                 columns=fd.get('groupby'),
-                values=utils.get_metric_names(fd.get('metrics')),
+                values=self.metric_labels,
                 fill_value=0,
                 aggfunc=sum)
 
@@ -2022,9 +2035,9 @@ class MapboxViz(BaseViz):
             return None
         fd = self.form_data
         label_col = fd.get('mapbox_label')
-        custom_metric = label_col and len(label_col) >= 1
+        has_custom_metric = label_col is not None and len(label_col) > 0
         metric_col = [None] * len(df.index)
-        if custom_metric:
+        if has_custom_metric:
             if label_col[0] == fd.get('all_columns_x'):
                 metric_col = df[fd.get('all_columns_x')]
             elif label_col[0] == fd.get('all_columns_y'):
@@ -2065,7 +2078,7 @@ class MapboxViz(BaseViz):
 
         return {
             'geoJSON': geo_json,
-            'customMetric': custom_metric,
+            'hasCustomMetric': has_custom_metric,
             'mapboxApiKey': config.get('MAPBOX_API_KEY'),
             'mapStyle': fd.get('mapbox_style'),
             'aggregatorName': fd.get('pandas_aggfunc'),
@@ -2186,13 +2199,18 @@ class BaseDeckGLViz(BaseViz):
         return df
 
     def add_null_filters(self):
+        fd = self.form_data
         spatial_columns = set()
         for key in self.spatial_control_keys:
             for column in self.get_spatial_columns(key):
                 spatial_columns.add(column)
 
-        if self.form_data.get('adhoc_filters') is None:
-            self.form_data['adhoc_filters'] = []
+        if fd.get('adhoc_filters') is None:
+            fd['adhoc_filters'] = []
+
+        line_column = fd.get('line_column')
+        if line_column:
+            spatial_columns.add(line_column)
 
         for column in sorted(spatial_columns):
             filter_ = to_adhoc({
@@ -2200,7 +2218,7 @@ class BaseDeckGLViz(BaseViz):
                 'op': 'IS NOT NULL',
                 'val': '',
             })
-            self.form_data['adhoc_filters'].append(filter_)
+            fd['adhoc_filters'].append(filter_)
 
     def query_obj(self):
         fd = self.form_data

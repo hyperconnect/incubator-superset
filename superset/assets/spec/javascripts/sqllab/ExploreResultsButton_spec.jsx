@@ -3,7 +3,6 @@ import configureStore from 'redux-mock-store';
 import thunk from 'redux-thunk';
 
 import { shallow } from 'enzyme';
-import { describe, it } from 'mocha';
 import { expect } from 'chai';
 import sinon from 'sinon';
 
@@ -92,20 +91,6 @@ describe('ExploreResultsButton', () => {
   it('renders a Button', () => {
     const wrapper = getExploreResultsButtonWrapper();
     expect(wrapper.find(Button)).to.have.length(1);
-  });
-
-  describe('getColumnFromProps', () => {
-    it('should require valid query parameter in props', () => {
-      const emptyQuery = {
-        database,
-        show: true,
-        query: {},
-      };
-      const wrapper = shallow(<ExploreResultsButton {...emptyQuery} />, {
-        context: { store },
-      }).dive();
-      expect(wrapper.state().hints).to.deep.equal([]);
-    });
   });
 
   describe('datasourceName', () => {
