@@ -41,7 +41,7 @@ yarn-error.log
 
 # IntelliJ
 *.iml
-venv
+venv*
 @eaDir/
 
 # docker
